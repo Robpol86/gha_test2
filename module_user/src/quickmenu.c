@@ -26,62 +26,94 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 #include "log.h"
 #include "vqmbt.h"
 
+#define BUTTON_LABEL_MAX (sizeof(((VqmbtDeviceInfo*)0)->name) + 16)
+
+static VqmbtDeviceInfo devices[VQMBT_MAX_DEVICES];  // TODO locking/semaphore?
+
 // Widget IDs (prefixed because they must be unique across all plugins).
 #define ID_SEPARATOR MODULE_NAME "Separator"
 #define ID_PLANE_ROOT MODULE_NAME "PlaneRoot"
 #define ID_SECTION_TEXT MODULE_NAME "SectionText"
-#define ID_LOADING_TEXT MODULE_NAME "LoadingText"
-#define ID_BUTTON MODULE_NAME "Button"
+static const char* const ID_BUTTONS[VQMBT_MAX_DEVICES] = {
+    MODULE_NAME "Button0", MODULE_NAME "Button1", MODULE_NAME "Button2", MODULE_NAME "Button3",
+    MODULE_NAME "Button4", MODULE_NAME "Button5", MODULE_NAME "Button6", MODULE_NAME "Button7",
+};
+_Static_assert(sizeof(ID_BUTTONS) / sizeof(ID_BUTTONS[0]) == VQMBT_MAX_DEVICES,
+               "ID_BUTTONS size must match VQMBT_MAX_DEVICES");
 
 /**
- * Called when the user taps on the button. Emits a log message.
+ * Connect or disconnect the device associated with the button.
+ *
+ * Called when the user taps on the button.
+ *
+ * TODO:
+ * - Relabel button "Connecting <name>...".
+ * - when user taps a button disable all buttons and wait for callback.
  */
 BUTTON_HANDLER(on_press) {
     (void)id;
     (void)hash;
     (void)eventId;
-    (void)userDat;
+    int idx = (int)(intptr_t)userDat;
 
-    LOG_DEBUG(0, "Calling kernel functions.");
+    VqmbtDeviceInfo* dev = &devices[idx];
 
-    VqmbtDeviceInfo devices[VQMBT_MAX_DEVICES];  // TODO file-scope like in kernel?
-    VqmbtDeviceInfo* dev;
-    int count = kvqmbtGetPairedDevices(devices, VQMBT_MAX_DEVICES);
-    if (count > 0) {
-        LOG_DEBUG(0, "count=%d", count);
-        int conn_disconn_idx = 0;
-        // Log.
-        for (int idx = 0; idx < count; idx++) {
-            dev = &devices[idx];
-            LOG_DEBUG(0, "idx=%d name=\"%s\" mac0=0x%08X mac1=0x%08X", idx, dev->name, dev->mac0, dev->mac1);
-            if (sceClibStrncmp(dev->name, "APP Scuffed", 11) == 0) {
-                LOG_DEBUG(0, "Set conn_disconn_dev to %d for device \"%s\"", idx, dev->name);
-                conn_disconn_idx = idx;
-            }
-        }
-        // Connect/disconnect.
-        dev = &devices[conn_disconn_idx];
-        if (kvqmbtIsConnected(dev->mac0, dev->mac1)) {
-            LOG_DEBUG(0, "Disconnecting \"%s\"", dev->name);
-            kvqmbtDisconnectDevice(dev->mac0, dev->mac1);
-        } else {
-            LOG_DEBUG(0, "Connecting \"%s\"", dev->name);
-            kvqmbtConnectDevice(dev->mac0, dev->mac1);
-        }
-    } else {
-        LOG_ERROR("kvqmbtGetPairedDevices returned error: 0x%08X", count);
+    // Do nothing if slot is empty.
+    if ((dev->mac0 | dev->mac1) == 0) {  // TODO make more robust, use `static int devices_count`?
+        LOG_DEBUG(0, "button idx=%d is empty: no-op", idx);
+        return;
     }
 
-    LOG_DEBUG(0, "Done calling kernel functions.");
+    if (dev->state == 5 || dev->state == 6) {
+        LOG_DEBUG(0, "Disconnecting \"%s\"", dev->name);
+        kvqmbtDisconnectDevice(dev->mac0, dev->mac1);
+    } else {
+        LOG_DEBUG(0, "Connecting \"%s\"", dev->name);
+        kvqmbtConnectDevice(dev->mac0, dev->mac1);
+    }
 }
 
 /**
  * Called when the quick menu is opened by the user.
+ *
+ * TODO:
+ * - Performance? delay opening qm? async?
+ * - Hide empty slots and resize plane to eliminate ghost scrolling.
  */
 ONLOAD_HANDLER(on_load) {
     (void)id;
 
     LOG_DEBUG(0, "Quick menu opened.");
+
+    // Zero the struct array to prevent ghost data.
+    for (int i = 0; i < (int)sizeof(devices); i++) ((unsigned char*)devices)[i] = 0;
+
+    // Query kernel.
+    VqmbtDeviceInfo* dev;
+    int count = kvqmbtGetPairedDevices(devices, VQMBT_MAX_DEVICES);
+    if (count < 0) {
+        LOG_ERROR("kvqmbtGetPairedDevices returned error: 0x%08X", count);
+        return;
+    }
+    if (count < 1) {
+        LOG_DEBUG(0, "No paired devices.");
+        return;
+    }
+    LOG_DEBUG(0, "count=%d", count);
+
+    // Update button labels.
+    for (int idx = 0; idx < count; idx++) {
+        dev = &devices[idx];
+        LOG_DEBUG(0, "idx=%d name=\"%s\" mac0=0x%08X mac1=0x%08X", idx, dev->name, dev->mac0, dev->mac1);
+        const char* id = ID_BUTTONS[idx];
+        char label[BUTTON_LABEL_MAX];
+        if (dev->state == 5 || dev->state == 6) {  // TODO dedupe magic numbers with enum?
+            sceClibSnprintf(label, sizeof(label), "Disconnect %s", dev->name);
+        } else {
+            sceClibSnprintf(label, sizeof(label), "Connect %s", dev->name);
+        }
+        QuickMenuRebornSetWidgetLabel(id, label);
+    }
 }
 
 /**
@@ -91,12 +123,43 @@ void on_unload(const char* id) {
     (void)id;
 
     LOG_DEBUG(0, "Quick menu closed.");
+
+    // Reset button labels.
+    for (int idx = 0; idx < VQMBT_MAX_DEVICES; idx++) {
+        const char* id = ID_BUTTONS[idx];
+        char label[BUTTON_LABEL_MAX];
+        sceClibSnprintf(label, sizeof(label), "Slot %d: no device", idx + 1);
+        QuickMenuRebornSetWidgetLabel(id, label);
+    }
+}
+
+/**
+ * Add connect/disconnect buttons to quick menu. One button per paired device.
+ *
+ * For now buttons are fixed and so is the plane.
+ *
+ * TODO:
+ * - callback: relabel button with new state. Surface error in button as close/reopen resets labels
+ * - button_reset() button_disable() button_enable() functions
+ */
+void add_buttons(void) {
+    for (int idx = 0; idx < VQMBT_MAX_DEVICES; idx++) {
+        const char* id = ID_BUTTONS[idx];
+        QuickMenuRebornRegisterWidget(id, ID_PLANE_ROOT, button);
+        QuickMenuRebornSetWidgetSize(id, 600, 75, 0, 0);
+        QuickMenuRebornSetWidgetPosition(id, 20, 243 - (idx * 80), 0, 0);
+        QuickMenuRebornSetWidgetColor(id, 1, 1, 1, 1);
+        char label[BUTTON_LABEL_MAX];
+        sceClibSnprintf(label, sizeof(label), "Slot %d: no device", idx + 1);
+        QuickMenuRebornSetWidgetLabel(id, label);
+        QuickMenuRebornRegisterEventHanlder(id, QMR_BUTTON_RELEASE_ID, on_press, (void*)(intptr_t)idx);
+    }
 }
 
 /**
  * Loads the plugin's quick menu items.
  *
- * TODOs:
+ * TODO:
  * - Add function to calculate position from top left instead of center.
  * - Pixel perfect alignment.
  * - If kernel plugin isn't loaded notify user.
@@ -107,46 +170,33 @@ void quickmenu_start(void) {
 
     // Add the root plane that holds all other items.
     QuickMenuRebornRegisterWidget(ID_PLANE_ROOT, NULL, plane);
-    QuickMenuRebornSetWidgetSize(ID_PLANE_ROOT, SCE_PLANE_WIDTH, 200, 0, 0);
+    QuickMenuRebornSetWidgetSize(ID_PLANE_ROOT, SCE_PLANE_WIDTH, 700, 0, 0);
     QuickMenuRebornSetWidgetColor(ID_PLANE_ROOT, 1, 1, 1, 0);
 
     // Add section heading text.
     QuickMenuRebornRegisterWidget(ID_SECTION_TEXT, ID_PLANE_ROOT, text);
     QuickMenuRebornSetWidgetSize(ID_SECTION_TEXT, SCE_PLANE_WIDTH, 50, 0, 0);
-    QuickMenuRebornSetWidgetPosition(ID_SECTION_TEXT, -206, 62, 0, 0);
+    QuickMenuRebornSetWidgetPosition(ID_SECTION_TEXT, -206, 312, 0, 0);
     QuickMenuRebornSetWidgetColor(ID_SECTION_TEXT, 1, 1, 1, 1);
     QuickMenuRebornSetWidgetLabel(ID_SECTION_TEXT, "Bluetooth Devices");
 
-    // TODO one button per device. Depending on state label it "Connect <device>" or "Disconnect <device>".
-    // TODO when user taps a button disable all buttons and wait for callback.
-    // TODO refresh button labels and enable.
-
-    // Add placeholder "Loading" text.
-    QuickMenuRebornRegisterWidget(ID_LOADING_TEXT, ID_PLANE_ROOT, text);
-    QuickMenuRebornSetWidgetSize(ID_LOADING_TEXT, SCE_PLANE_WIDTH, 50, 0, 0);
-    QuickMenuRebornSetWidgetPosition(ID_LOADING_TEXT, -220, -3, 0, 0);
-    QuickMenuRebornSetWidgetColor(ID_LOADING_TEXT, 1, 1, 1, 1);
-    QuickMenuRebornSetWidgetLabel(ID_LOADING_TEXT, "Loading...");
-
-    // Add button to test emitting logs.
-    QuickMenuRebornRegisterWidget(ID_BUTTON, ID_PLANE_ROOT, button);
-    QuickMenuRebornSetWidgetSize(ID_BUTTON, 200, 75, 0, 0);
-    QuickMenuRebornSetWidgetPosition(ID_BUTTON, -220, -83, 0, 0);
-    QuickMenuRebornSetWidgetColor(ID_BUTTON, 1, 1, 1, 1);
-    QuickMenuRebornSetWidgetLabel(ID_BUTTON, "Emit Log");
-    QuickMenuRebornRegisterEventHanlder(ID_BUTTON, QMR_BUTTON_RELEASE_ID, on_press, NULL);
+    // Add device slot buttons.
+    add_buttons();
 
     // Register handlers.
-    QuickMenuRebornAssignOnLoadHandler(on_load, ID_PLANE_ROOT);
-    QuickMenuRebornAssignOnDeleteHandler(on_unload, ID_PLANE_ROOT);
+    const char* last = ID_BUTTONS[VQMBT_MAX_DEVICES - 1];
+    QuickMenuRebornAssignOnLoadHandler(on_load, last);
+    QuickMenuRebornAssignOnDeleteHandler(on_unload, last);
 }
 
 /**
  * Unloads the plugin's quick menu items.
  */
 void quickmenu_stop(void) {
-    QuickMenuRebornUnregisterWidget(ID_BUTTON);
-    QuickMenuRebornUnregisterWidget(ID_LOADING_TEXT);
+    for (int idx = 0; idx < VQMBT_MAX_DEVICES; idx++) {
+        const char* id = ID_BUTTONS[idx];
+        QuickMenuRebornUnregisterWidget(id);
+    }
     QuickMenuRebornUnregisterWidget(ID_SECTION_TEXT);
     QuickMenuRebornUnregisterWidget(ID_PLANE_ROOT);
     QuickMenuRebornRemoveSeparator(ID_SEPARATOR);
