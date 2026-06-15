@@ -19,6 +19,17 @@ this program. If not, see <https://www.gnu.org/licenses/>.
  * @brief Interface for the Quick Menu on the PS Vita.
  ******************************************************************************/
 
+/**
+ * TODO:
+ * - If kernel plugin isn't loaded notify user.
+ * - If kernel plugin loaded AFTER user plugin what happens? probably fails. Handle this too.
+ * - If kernel plugin's version does not match user module's fail with error (surfaced in UI or Settings).
+ * - Two body planes: one for the buttons, another with just a text message.
+ * - Hide empty slots and resize plane to eliminate ghost scrolling.
+ * - long bt names ellipses
+ * - force close quickmenu. Clean up on recovery?
+ */
+
 #include "quickmenu.h"
 
 #include <psp2/kernel/clib.h>
@@ -28,7 +39,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 #include "log.h"
 #include "vqmbt.h"
 
-#define BUTTON_LABEL_MAX (sizeof(((VqmbtDeviceInfo*)0)->name) + 16)
+#define BUTTON_LABEL_MAX (VQMBT_SCE_DEVICE_NAME_MAX + 16)
 
 static VqmbtDeviceInfo devices[VQMBT_MAX_DEVICES];  // TODO locking/semaphore?
 
@@ -52,7 +63,7 @@ _Static_assert(sizeof(ID_BUTTONS) / sizeof(ID_BUTTONS[0]) == VQMBT_MAX_DEVICES,
  * - Relabel button "Connecting <name>...".
  * - when user taps a button disable all buttons and wait for callback.
  */
-BUTTON_HANDLER(quickmenu_on_press) {
+static BUTTON_HANDLER(quickmenu_on_press) {
     (void)id;
     (void)hash;
     (void)eventId;
@@ -82,7 +93,7 @@ BUTTON_HANDLER(quickmenu_on_press) {
  * - Performance? delay opening qm? async?
  * - Hide empty slots and resize plane to eliminate ghost scrolling.
  */
-ONLOAD_HANDLER(quickmenu_on_load) {
+static ONLOAD_HANDLER(quickmenu_on_load) {
     (void)id;
 
     LOG_DEBUG(0, "Quick menu opened.");
@@ -121,7 +132,7 @@ ONLOAD_HANDLER(quickmenu_on_load) {
 /**
  * Called when the quick menu is closed by the user.
  */
-void quickmenu_on_unload(const char* id) {
+static void quickmenu_on_unload(const char* id) {
     (void)id;
 
     LOG_DEBUG(0, "Quick menu closed.");
@@ -164,8 +175,6 @@ static void add_buttons(void) {
  * TODO:
  * - Add function to calculate position from top left instead of center.
  * - Pixel perfect alignment.
- * - If kernel plugin isn't loaded notify user.
- * - If kernel plugin loaded AFTER user plugin what happens? probably fails. Handle this too.
  */
 void quickmenu_start(void) {
     // Add horizontal line separator.

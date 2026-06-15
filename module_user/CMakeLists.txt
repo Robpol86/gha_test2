@@ -8,9 +8,9 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/exports.yml.in" "${EXPORTS_YML}" @ON
 
 add_executable("${MODULE_NAME}"
   src/main.c
-  src/quickmenu.c
-  src/logfile.c
   src/kmod_event.c
+  src/logfile.c
+  src/quickmenu.c
 )
 
 target_compile_definitions("${MODULE_NAME}" PRIVATE ENABLE_VITASDK_BUILD_ASSERT
@@ -47,6 +47,7 @@ target_link_directories("${MODULE_NAME}" PRIVATE
 target_link_libraries("${MODULE_NAME}" PRIVATE
   gcc
 
+  # SceLibc_stub: not available, use sceClibMemset instead of `= {0}`.
   SceIofilemgr_stub
   SceKernelThreadMgr_stub
   SceLibKernel_stub
