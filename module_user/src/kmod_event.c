@@ -29,7 +29,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 #include "vqmbt.h"
 
 #define THREAD_PRIORITY 0x96 /* Higher value = lower priority. */
-#define THREAD_STACK_SIZE 0x1000
+#define THREAD_STACK_SIZE 0x4000
 
 static KmeCallback cb_on_start = NULL;
 static KmeCallback cb_on_event_dropped = NULL;
