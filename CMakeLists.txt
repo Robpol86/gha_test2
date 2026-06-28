@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 
+# Block in-source builds.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+  message(FATAL_ERROR "In-source builds are forbidden. Build with: `make clean build`")
+endif()
+
+# Look for VITASDK environment variable.
 if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   if(DEFINED ENV{VITASDK} AND NOT "$ENV{VITASDK}" STREQUAL "")
     set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE PATH "toolchain file")
