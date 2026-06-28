@@ -1,3 +1,6 @@
+include("${CMAKE_SOURCE_DIR}/cmake/common.cmake" REQUIRED)
+include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
+
 # Set variables.
 set(EXPORTS_YML "${CMAKE_CURRENT_BINARY_DIR}/cmake_gen/exports.yml")
 set(MODULE_NAME "${PROJECT_NAME}Kernel")
@@ -13,29 +16,10 @@ add_executable("${MODULE_NAME}"
   src/umod_callback.c
 )
 
-target_compile_definitions("${MODULE_NAME}" PRIVATE ENABLE_VITASDK_BUILD_ASSERT
-  MODULE_NAME="${MODULE_NAME}"
-  PROJECT_NAME="${PROJECT_NAME}"
-)
-
-target_include_directories("${MODULE_NAME}" PRIVATE
-  "${CMAKE_SOURCE_DIR}/include"
-  "${CMAKE_BINARY_DIR}/cmake_gen"
-)
-
-target_compile_options("${MODULE_NAME}" PRIVATE
-  -Wall
-  -Werror=format-security
-  -Werror=strict-prototypes
-  -Wformat=2
-  -ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/src/=
-)
-
-target_link_options("${MODULE_NAME}" PRIVATE
-  -Wl,-e,module_start
-  -Wl,-q
-  -nostdlib
-)
+common_compile_definitions("${MODULE_NAME}")
+common_include_directories("${MODULE_NAME}")
+common_compile_options("${MODULE_NAME}")
+common_link_options("${MODULE_NAME}")
 
 target_link_libraries("${MODULE_NAME}" PRIVATE
   gcc

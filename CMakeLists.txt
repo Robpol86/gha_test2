@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-  if(DEFINED ENV{VITASDK})
+  if(DEFINED ENV{VITASDK} AND NOT "$ENV{VITASDK}" STREQUAL "")
     set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE PATH "toolchain file")
   else()
     message(FATAL_ERROR "Please define VITASDK to point to your SDK path!")
@@ -9,12 +9,7 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 endif()
 
 project(vitaQmBluetooth VERSION 0.1.0 LANGUAGES C)
-include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
 
-# Explicit includes for clang-tidy.
-list(REMOVE_ITEM CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES "$ENV{VITASDK}/arm-vita-eabi/include")
-
-# Export compile commands for clang-tidy.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_subdirectory(module_kernel)
