@@ -21,8 +21,6 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <cmocka.h>
 #include <fff.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "qm_state.c"
 
@@ -60,6 +58,9 @@ static int setup(void** state) {
     return 0;
 }
 
+/**
+ * Test.
+ */
 static void test_bulk_from_clean_one_device(void** state) {
     (void)state;
 
@@ -90,6 +91,9 @@ static void test_bulk_from_clean_one_device(void** state) {
     }
 }
 
+/**
+ * Test.
+ */
 static void test_bulk_from_clean_one_device_bt_off(void** state) {
     (void)state;
 
@@ -120,6 +124,9 @@ static void test_bulk_from_clean_one_device_bt_off(void** state) {
     }
 }
 
+/**
+ * Test.
+ */
 static void test_bulk_from_clean_one_device_already_connected(void** state) {
     (void)state;
 
@@ -150,6 +157,9 @@ static void test_bulk_from_clean_one_device_already_connected(void** state) {
     }
 }
 
+/**
+ * Test.
+ */
 static void test_bulk_add_then_readd(void** state) {
     (void)state;
 
@@ -189,6 +199,9 @@ static void test_bulk_add_then_readd(void** state) {
     assert_int_equal(qm_state.buttons[0].btn_state, BTNSTATE_DISCONNECTED);
 }
 
+/**
+ * Test.
+ */
 static void test_bulk_add_remove_only_device(void** state) {
     (void)state;
 
@@ -231,6 +244,9 @@ static void test_bulk_add_remove_only_device(void** state) {
     }
 }
 
+/**
+ * Test.
+ */
 static void test_bulk_add_remove_second_device(void** state) {
     (void)state;
 
@@ -362,6 +378,9 @@ static void test_bulk_from_clean_no_devices(void** state) {
     }
 }
 
+/**
+ * Test.
+ */
 static void test_bulk_from_clean_max_devices(void** state) {
     (void)state;
 

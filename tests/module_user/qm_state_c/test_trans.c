@@ -21,8 +21,6 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <cmocka.h>
 #include <fff.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "qm_state.c"
 
@@ -60,6 +58,9 @@ static int setup(void** state) {
     return 0;
 }
 
+/**
+ * Test.
+ */
 static void test_bt_on_off_on_one_device(void** state) {
     (void)state;
 
