@@ -1,6 +1,7 @@
 # Contributing
 
-TODO
+This document will guide you through setting up your local environment to start developing for this project. It also covers
+the steps needed to get a [hacked retail PS Vita](https://vita.hacks.guide/) ready for development.
 
 ## Bug Reports
 
@@ -10,34 +11,114 @@ TODO
 
 TODO
 
-### Setup Development Environment
+## Setup Local Development Environment
 
 TODO
 
-TODO support vita3k
+### macOS
 
-Install vitacompanion on a PS Vita:
+TODO
+
+### Linux
+
+TODO
+
+### Windows
+
+TODO Use WSL
+
+## Setup Development PS Vita
+
+This project's [Makefile](Makefile) is designed to quickly deploy new development builds to a hardware PS Vita running
+**vitacompanion** and **Cat-A-Log**.
+
+### vitacompanion
+
+[vitacompanion](https://github.com/devnoname120/vitacompanion) provides an always-on FTP server that this project uses to:
+
+- Upload new builds to the PS Vita
+- Download logs and screenshots from the PS Vita
+- Reboot the PS Vita
+
+To install vitacompanion on the PS Vita:
+
+1. Download **vitacompanion.suprx** from: https://github.com/devnoname120/vitacompanion/releases/latest
+1. Upload the file to the PS Vita into the directory: **ur0:tai/**
+1. Add this to **ur0:tai/config.txt**:
+    ```text
+    *main
+    ur0:tai/vitacompanion.suprx
+    ```
+1. Reboot the PS Vita
+1. Get the PS Vita's IP address: Settings > Network > Internet Connection Status
+
+#### Verify
+
+> [!NOTE]
+> The Makefile will first move all screenshots on the PS Vita out of their random subdirectories and into the parent
+> directory. In other words the SCREENSHOT directory structure will be flattened.
+
+Take a screenshot (PS Button + Start) and then run (replace 192.168.0.100 with your PS Vita's IP address):
 
 ```bash
-# TODO replace with make commands.
-# https://github.com/Robpol86/vitacompanion/tree/sdk-fix
-#   rm -rf build && cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -B build . && cmake --build build
-wget -P build-SCREENSHOT --mirror ftp://192.168.9.109:1337/ux0:/picture/SCREENSHOT/
-curl -T build-debug/vitaQmBluetooth.suprx ftp://192.168.9.109:1337/ur0:/QuickMenuReborn/
-echo reboot |nc -v 192.168.9.109 1338
+make PSVITA_IP=192.168.0.100 fetch-screenshots
+ls fetch-screenshots
 ```
 
-Install Cat-A-Log on a PS Vita:
+For more commands, run:
 
 ```bash
-# https://github.com/isage/catlog
-#   rm -rf build && cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -B build . && cmake --build build
-#   for f in build/*_module/catlog.s?prx; do curl -T "$f" ftp://192.168.9.109:1337/ur0:/tai/; done
-# Edit ur0:tai/config.txt
-# Add firewall rule to router.
-# Local: nc -kl 10224
-# Reboot vita to get a lot of kernel log statements.
+make help
 ```
+
+> [!NOTE]
+> If you get **Access failed: 550 Invalid directory** I've opened a bug report for it here:
+> https://github.com/devnoname120/vitacompanion/issues/20
+>
+> The current solution is to build 7a9a1a44c648bf995bfbd11c00fd3616dcc6bd7c yourself.
+
+### Cat-A-Log
+
+[Cat-A-Log](https://github.com/isage/catlog) is used to read logs live from the PS Vita in your development machine's
+terminal.
+
+To install Cat-A-Log on the PS Vita:
+
+1. Download **catlog.suprx** and **catlog.skprx** from: https://github.com/isage/catlog/releases/latest
+1. Upload both files to the PS Vita into the directory: **ur0:tai/**
+1. Add this to **ur0:tai/config.txt**:
+    ```text
+    *KERNEL
+    ur0:tai/catlog.skprx
+    *NPXS10015
+    ur0:tai/catlog.suprx
+    ```
+1. Reboot the PS Vita
+1. Get your computer's IP address, then input it in: Settings > Network > Cat Log > Log host
+    1. Set **Log port** to: 10224
+    1. Then return to main Settings menu
+1. In your local terminal run `make recv-logs`, you should instantly see a lot of logs appear
+
+> [!TIP]
+> If you don't see any logs, try rebooting the PS Vita.
+> If you still don't see any logs, make sure you've set the right IP address and that you can ping the PS Vita from your
+> computer.
+
+### Deploy
+
+After you've setup **vitacompanion** and **Cat-A-Log** try deploying this project to the PS Vita.
+
+1. Add this to **ur0:tai/config.txt**:
+    ```
+    *KERNEL
+    ur0:tai/vitaQmBluetooth.skprx
+    *main
+    ur0:tai/QuickMenuReborn.suprx
+    ```
+1. Run this command:
+    ```bash
+    make PSVITA_IP=192.168.0.100 deploy-init deploy reboot recv-logs
+    ```
 
 ## Releases
 
