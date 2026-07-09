@@ -5,27 +5,17 @@ the steps needed to get a [hacked retail PS Vita](https://vita.hacks.guide/) rea
 
 ## Bug Reports
 
-TODO
-
-## Pull Requests
-
-TODO
+To report bugs simply open a new GitHub Issue for this project. It's most helpful if you include steps to reproduce the issue
+and if you can attach some screenshots to it.
 
 ## Setup Local Development Environment
 
-TODO
+This project is built using the Vita SDK. You must have it installed before developing for this project. For more information
+about that go here: https://vitasdk.org/
 
-### macOS
-
-TODO
-
-### Linux
-
-TODO
-
-### Windows
-
-TODO Use WSL
+Once you have that installed you can reference the [GitHub Actions YAML files](./.github/) to see what you need to build the
+project on macOS or Linux. If you're using Windows it's
+[recommended to use WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
 
 ## Setup Development PS Vita
 
@@ -43,14 +33,14 @@ This project's [Makefile](Makefile) is designed to quickly deploy new developmen
 To install vitacompanion on the PS Vita:
 
 1. Download **vitacompanion.suprx** from: https://github.com/devnoname120/vitacompanion/releases/latest
-1. Upload the file to the PS Vita into the directory: **ur0:tai/**
-1. Add this to **ur0:tai/config.txt**:
+2. Upload the file to the PS Vita into the directory: **ur0:tai/**
+3. Add this to **ur0:tai/config.txt**:
     ```text
     *main
     ur0:tai/vitacompanion.suprx
     ```
-1. Reboot the PS Vita
-1. Get the PS Vita's IP address: Settings > Network > Internet Connection Status
+4. Reboot the PS Vita
+5. Get the PS Vita's IP address: Settings > Network > Internet Connection Status
 
 #### Verify
 
@@ -85,19 +75,19 @@ terminal.
 To install Cat-A-Log on the PS Vita:
 
 1. Download **catlog.suprx** and **catlog.skprx** from: https://github.com/isage/catlog/releases/latest
-1. Upload both files to the PS Vita into the directory: **ur0:tai/**
-1. Add this to **ur0:tai/config.txt**:
+2. Upload both files to the PS Vita into the directory: **ur0:tai/**
+3. Add this to **ur0:tai/config.txt**:
     ```text
     *KERNEL
     ur0:tai/catlog.skprx
     *NPXS10015
     ur0:tai/catlog.suprx
     ```
-1. Reboot the PS Vita
-1. Get your computer's IP address, then input it in: Settings > Network > Cat Log > Log host
+4. Reboot the PS Vita
+5. Get your computer's IP address, then input it in: Settings > Network > Cat Log > Log host
     1. Set **Log port** to: 10224
-    1. Then return to main Settings menu
-1. In your local terminal run `make recv-logs`, you should instantly see a lot of logs appear
+    2. Then return to main Settings menu
+6. In your local terminal run `make recv-logs`, you should instantly see a lot of logs appear
 
 > [!TIP]
 > If you don't see any logs, try rebooting the PS Vita.
@@ -115,11 +105,22 @@ After you've setup **vitacompanion** and **Cat-A-Log** try deploying this projec
     *main
     ur0:tai/QuickMenuReborn.suprx
     ```
-1. Run this command:
+2. Run this command:
     ```bash
     make PSVITA_IP=192.168.0.100 deploy-init deploy reboot recv-logs
     ```
 
 ## Releases
 
-TODO
+These are the steps a maintainer will take to make a new release.
+
+1. Create a new pull request with the following changes:
+    1. Finalize the [CHANGELOG.md](CHANGELOG.md) file and resetting the **Unreleased** section to "N/A".
+    2. Set the new version in the main [`CMakeLists.txt`](CMakeLists.txt#L28) file.
+2. After merging the PR manually draft a new release in: https://github.com/Robpol86/vitaQmBluetooth/releases
+    1. Set a new tag using the `vX.X.X` convention.
+    2. Set the release title using the `vX.X.X [YYYY-MM-DD]` convention.
+    3. Click "Generate release notes".
+3. Click "Publish release".
+    1. https://github.com/Robpol86/vitaQmBluetooth/actions/workflows/release.yml will automatically run.
+    2. The release workflow will edit the body and upload assets to the release you've just created.
