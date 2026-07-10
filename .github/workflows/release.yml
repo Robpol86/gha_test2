@@ -43,7 +43,6 @@ jobs:
       - name: Validate version
         run: |
           set -euxo pipefail
-          grep "Version automatically set by release.yml" CMakeLists.txt
           old_version="$(grep -Pom1 "VERSION \K[0-9.]+(?=.+Version automatically set by release.yml)" CMakeLists.txt)"
           if ! dpkg --compare-versions "$INPUT_VERSION" gt "$old_version"; then
             echo "::error::New version $INPUT_VERSION must be greater than older version $old_version"
