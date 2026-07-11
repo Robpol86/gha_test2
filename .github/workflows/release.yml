@@ -13,6 +13,15 @@ on:
         required: true
         type: string
 
+env:
+  EXPECTED_FILES: |
+    cl_section.md
+    install.md
+    release/module_kernel/vitaQmBluetooth.skprx
+    release/module_user/vitaQmBluetooth.suprx
+    redist/quickmenureborn/QuickMenuReborn.suprx
+    redist/quickmenureborn/qmr_plugin.rco
+
 jobs:
 
   Collect:
@@ -22,13 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       INPUT_VERSION: "${{ inputs.release_version }}"
-      EXPECTED_FILES: |
-        cl_section.md
-        install.md
-        release/module_kernel/vitaQmBluetooth.skprx
-        release/module_user/vitaQmBluetooth.suprx
-        redist/quickmenureborn/QuickMenuReborn.suprx
-        redist/quickmenureborn/qmr_plugin.rco
     steps:
       - name: Validate input
         id: validate-input
@@ -121,6 +123,8 @@ jobs:
     # - If releasing from non-main: prerelease
     needs: Collect
     runs-on: ubuntu-latest
+    env:
+      NEW_TAG: "v${{ inputs.release_version }}"
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v8
@@ -128,28 +132,25 @@ jobs:
           name: collected
       - name: Prepare
         id: prepare
-        env:
-          GIT_TAG: "v${{ inputs.release_version }}"
         run: |
           set -euxo pipefail
-          echo "TITLE=$GIT_TAG [$(date +%Y-%m-%d)]" |tee -a "$GITHUB_OUTPUT"
+          echo "TITLE=$NEW_TAG [$(date +%Y-%m-%d)]" |tee -a "$GITHUB_OUTPUT"
           {
             echo "## Changelog"
             cat cl_section.md
+            echo
             echo "## Install"
             cat install.md
           } |tee release_body.md
-      - name: TODO
-        run: |
-          set -euxo pipefail
-          find . -type f
-          cat release_body.md
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
         with:
-          name: release_body
-          if-no-files-found: error
-          path: release_body.md
+          name: "${{ steps.prepare.outputs.TITLE }}"
+          body_path: release_body.md
+          files: ${{ env.EXPECTED_FILES }}
+          tag_name: "${{ env.NEW_TAG }}"
+          target_commitish: "${{ github.sha }}"
+          fail_on_unmatched_files: true
 
 # TODOs:
 # - Revisit CONTRIBUTING.md release instructions.
