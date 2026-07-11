@@ -16,6 +16,9 @@ on:
 jobs:
 
   Validate:
+    #
+    # Validate and normalize the inputted version, and generate the release datestamp.
+    #
     runs-on: ubuntu-latest
     steps:
       - name: Validate input
@@ -33,34 +36,66 @@ jobs:
               printf("VERSION=%d.%d.%d\n", int(MAJOR), int(MINOR), int(PATCH))
             }
           ' |tee -a "$GITHUB_OUTPUT" |tee -a "$GITHUB_ENV"
-      - name: Generate title
-        id: generate-title
+      - name: Save date
+        id: save-date
         run: |
           set -euxo pipefail
-          echo "TITLE=v$VERSION [$(date +%Y-%m-%d)]" |tee -a "$GITHUB_OUTPUT"
+          date +DATE=%Y-%m-%d |tee -a "$GITHUB_OUTPUT"
       - name: Checkout
         uses: actions/checkout@v6
       - name: Validate version
+        id: validate-version
         run: |
           set -euxo pipefail
           old_version="$(grep -Pom1 "VERSION \K[0-9.]+(?=.+Version automatically set by release.yml)" CMakeLists.txt)"
+          if [[ ! "$old_version" =~ ^[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
+            echo "::error::Invalid old_version: $old_version"
+            exit 1
+          fi
           if ! dpkg --compare-versions "$VERSION" gt "$old_version"; then
             echo "::error::New version $VERSION must be greater than older version $old_version"
             exit 1
+          echo "OLD_VERSION=$old_version" |tee -a "$GITHUB_OUTPUT"
           fi
     outputs:
-      TITLE: "${{ steps.generate-title.outputs.TITLE }}"
-      VERSION: "${{ steps.validate-input.outputs.VERSION }}"
+      DATE: "${{ steps.save-date.outputs.DATE }}"
+      NEW_VERSION: "${{ steps.validate-input.outputs.VERSION }}"
+      OLD_VERSION: "${{ steps.validate-version.outputs.OLD_VERSION }}"
 
-  Bump:
-    # - Generate new changelog in place and upload as artifact
-    # - Set new version in /CMakeLists.txt
-    # - Commit and push
-    # - Wait for CI to build artifacts (assert)
-    # - Download them and re-upload them here for subsequent job
-    # - Upload redist assets as workflow artifacts
+  Changelog:
+    #
+    # Generate the changelog for the release.
+    #
     needs: Validate
     runs-on: ubuntu-latest
+    env:
+      DATE: "${{ needs.Validate.outputs.DATE }}"
+      NEW_VERSION: "${{ needs.Validate.outputs.NEW_VERSION }}"
+      OLD_VERSION: "${{ needs.Validate.outputs.OLD_VERSION }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # for git log
+      - name: TODO
+        run: |
+          set -euxo pipefail
+          printenv DATE
+          printenv NEW_VERSION
+          printenv OLD_VERSION
+
+  Bump:
+    # - Prepend new changelog section to CHANGELOG.md
+    # - Set new version in /CMakeLists.txt
+    # - Commit changes to both files and push
+    # - Wait for CI to build artifacts
+    # - Download release artifacts (2 files) and re-upload them here for subsequent job
+    # - Upload redist assets (2 files) as workflow artifacts
+    needs: [Validate, Changelog]
+    runs-on: ubuntu-latest
+    env:
+      DATE: "${{ needs.Validate.outputs.DATE }}"
+      NEW_VERSION: "${{ needs.Validate.outputs.NEW_VERSION }}"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -70,7 +105,7 @@ jobs:
   Release:
     # TODOs:
     # - Isolate install section from README between anchors into temporary file, upload as workflow artifact
-    # - Download artifacts from workflow
+    # - Download the four artifacts from workflow
     # - Create release with all files and body
     needs: Bump
     runs-on: ubuntu-latest
