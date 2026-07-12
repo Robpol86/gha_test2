@@ -97,7 +97,6 @@ jobs:
         id: get-run-id
         uses: actions/github-script@v9
         with:
-          github-token: "${{ secrets.GHA_SECRET_TOKEN }}"  # TODO remove
           script: |
             const { data } = await github.rest.actions.listWorkflowRuns({
               owner: context.repo.owner,
