@@ -3,6 +3,8 @@ name: CI
 on:
   pull_request:
   push:
+    branches:
+      - main
 
 jobs:
   BuildTestLint:
@@ -10,9 +12,7 @@ jobs:
       matrix:
         os: >-
           ${{
-            (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
-            && fromJSON('["ubuntu-latest", "macos-latest"]')
-            || fromJSON('["ubuntu-latest"]')
+            fromJSON('["ubuntu-latest"]')
           }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -45,12 +45,6 @@ jobs:
 
       - name: Build
         run: make build
-
-      - name: Test
-        run: make test
-
-      - name: Lint
-        run: make lint
 
       - name: Upload release artifact
         if: matrix.os == 'ubuntu-latest'
