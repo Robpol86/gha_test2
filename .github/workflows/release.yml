@@ -20,6 +20,7 @@ env:
     release/module_user/vitaQmBluetooth.suprx
     redist/quickmenureborn/QuickMenuReborn.suprx
     redist/quickmenureborn/qmr_plugin.rco
+    unknown.txt
 
 jobs:
 
@@ -165,7 +166,7 @@ jobs:
           body_path: release_body.md
           files: ${{ env.RELEASE_FILES }}
           fail_on_unmatched_files: true
-          overwrite_files: false
+          overwrite_files: true
           tag_name: "${{ env.NEW_TAG }}"
           target_commitish: "${{ github.sha }}"
           prerelease: ${{ github.ref_name != 'main' }}
