@@ -1,3 +1,6 @@
+# Required permmissions:
+# - Repo settings > Actions > General > Workflow permissions: Read and write permissions
+
 name: Release
 run-name: "${{ format('{0} [{1}]', inputs.release_version, github.ref_name) }}"
 
