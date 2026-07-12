@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - N/A
 
+## [1.0.1] - 2026-07-12
+
+Adding Monoprice Maker Select v2, updating Golf Alltrack SE
+
+- Adding new 3D printer project page.
+- Removing AirTag section (occasionally caused issues with radar system).
+- Updated fire extinguisher section.
+- Renaming "Experiments" section to "Projects".
+- Enabling edit page button that points to `/blob/` URLs.
+
+### Behind the Scenes
+
+- Updated from Python 3.9 to 3.10 in CI.
+- Added CHANGELOG file.
+- Updated Python dependencies.
+
 ## [1.0.0] - 2026-07-12
 
 ### Added
