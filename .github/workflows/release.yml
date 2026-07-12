@@ -1,3 +1,6 @@
+# Required permmissions:
+# - Repo settings > Actions > General > Workflow permissions: Read and write permissions
+
 name: Release
 run-name: "${{ format('{0} [{1}]', inputs.release_version, github.ref_name) }}"
 
@@ -94,7 +97,6 @@ jobs:
         id: get-run-id
         uses: actions/github-script@v9
         with:
-          github-token: "${{ secrets.GHA_SECRET_TOKEN }}"  # TODO remove
           script: |
             const { data } = await github.rest.actions.listWorkflowRuns({
               owner: context.repo.owner,
