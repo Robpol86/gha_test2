@@ -20,7 +20,6 @@ env:
     release/module_user/vitaQmBluetooth.suprx
     redist/quickmenureborn/QuickMenuReborn.suprx
     redist/quickmenureborn/qmr_plugin.rco
-    unknown.txt
 
 jobs:
 
@@ -174,5 +173,4 @@ jobs:
 
 # TODOs:
 # - Revisit CONTRIBUTING.md release instructions.
-# - Test missing release and expected files.
 # - Test preprelease
